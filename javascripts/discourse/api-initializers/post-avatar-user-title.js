@@ -9,7 +9,7 @@ export default apiInitializer("0.11.1", (api) => {
 
   Badge.findAll().then(badge_list => {
     badge_list.filter((badge) => {
-      return badge.allow_title && settings.badge_group_to_show.includes(badge.badge_grouping?.name) && badge.image_url;
+      return badge.allow_title && settings.badge_groups_to_show.includes(badge.badge_grouping?.name) && badge.image_url;
     }).forEach((badge) => {
       badgeInfoMap.set(badge.name, badge.image_url);
     });

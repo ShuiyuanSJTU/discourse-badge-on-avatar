@@ -1,4 +1,4 @@
-badge_group_to_show:
+badge_groups_to_show:
   type: list
   default: "活动"
   description:
