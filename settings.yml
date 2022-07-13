@@ -1,0 +1,12 @@
+badge_group_to_show:
+  type: list
+  default: "活动"
+  description:
+    zh_CN: "允许展示角标的徽章类别"
+    en: "Badge groups that allow corner badges to be displayed"
+override_group_flair:
+  type: bool
+  default: false
+  description:
+    zh_CN: "覆盖群组角标。设置为true时，将优先显示用户的徽章；否则优先显示群组角标。"
+    en: "Override group flair. When set to true, the user's badge will be displayed first; otherwise, the group flair will be displayed first."
