@@ -4,6 +4,14 @@ badge_groups_to_show:
   description:
     zh_CN: "允许展示角标的徽章类别"
     en: "Badge groups that allow corner badges to be displayed"
+
+show_on_topic_participant:
+  type: bool
+  default: false
+  description:
+    zh_CN: "是否在话题参与者处显示徽章，启用后可能带来性能问题。（保险起见，现在即使启用本设置也不会生效）"
+    en: "Whether to display badges on topic participants, may cause performance issues when enabled"
+
 override_group_flair:
   type: bool
   default: false
