@@ -51,6 +51,9 @@ export default apiInitializer("0.11.1", (api) => {
         if ((!(attrs.flair_url || attrs.flair_bg_color) || settings.override_group_flair) && this.hasTitleImg(attrs)) {
           attrs.flair_name = this.getUserTitle(attrs);
           attrs.flair_url = this.getTitleImgUrl(attrs);
+          if (attrs.flair_url) { 
+            attrs.flair_group_id = -1;
+          }
           let result = this._super(attrs, ...args);
           return result;
         } else {
