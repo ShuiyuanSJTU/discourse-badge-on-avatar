@@ -81,51 +81,38 @@ function widgetImplementation(api) {
     rerenderList.forEach((widget) => widget.scheduleRerender());
   });
 
-  const reopenWidgetList = ["post-avatar"];
-  if (settings.show_on_topic_participant) {
-    reopenWidgetList.push("topic-participant");
-  }
-
-  reopenWidgetList.forEach(function (widgetName) {
-    return api.reopenWidget(widgetName, {
-      getUserTitle(attrs) {
-        if (attrs.user_title !== undefined) {
-          return attrs.user_title;
-        } else if (attrs.username !== undefined) {
-          // 保险起见，先去掉这部分
-          // const widget = this;
-          // User.findByUsername(attrs.username).then((user) => {
-          //   attrs.user_title = user.title;
-          //   widget.scheduleRerender();
-          // });
+  return api.reopenWidget("post-avatar", {
+    getUserTitle(attrs) {
+      if (attrs.user_title !== undefined) {
+        return attrs.user_title;
+      }
+      return null;
+    },
+    getTitleImgUrl(attrs) {
+      return badgeInfoMap.get(this.getUserTitle(attrs));
+    },
+    hasTitleImg(attrs) {
+      return !!this.getTitleImgUrl(attrs);
+    },
+    html(attrs, ...args) {
+      if (!badgeInfoReady) {
+        rerenderList.push(this);
+      }
+      if (
+        (!(attrs.flair_url || attrs.flair_bg_color) ||
+          settings.override_group_flair) &&
+        this.hasTitleImg(attrs)
+      ) {
+        attrs.flair_name = this.getUserTitle(attrs);
+        attrs.flair_url = this.getTitleImgUrl(attrs);
+        if (attrs.flair_url) {
+          attrs.flair_group_id = -1;
         }
-      },
-      getTitleImgUrl(attrs) {
-        return badgeInfoMap.get(this.getUserTitle(attrs));
-      },
-      hasTitleImg(attrs) {
-        return !!this.getTitleImgUrl(attrs);
-      },
-      html(attrs, ...args) {
-        if (!badgeInfoReady) {
-          rerenderList.push(this);
-        }
-        if (
-          (!(attrs.flair_url || attrs.flair_bg_color) ||
-            settings.override_group_flair) &&
-          this.hasTitleImg(attrs)
-        ) {
-          attrs.flair_name = this.getUserTitle(attrs);
-          attrs.flair_url = this.getTitleImgUrl(attrs);
-          if (attrs.flair_url) {
-            attrs.flair_group_id = -1;
-          }
-          let result = this._super(attrs, ...args);
-          return result;
-        } else {
-          return this._super(attrs, ...args);
-        }
-      },
-    });
+        let result = this._super(attrs, ...args);
+        return result;
+      } else {
+        return this._super(attrs, ...args);
+      }
+    },
   });
 }
