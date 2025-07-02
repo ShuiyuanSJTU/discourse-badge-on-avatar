@@ -1,24 +1,82 @@
 import { apiInitializer } from "discourse/lib/api";
+import { withSilencedDeprecations } from "discourse/lib/deprecated";
 import Badge from "discourse/models/badge";
 
+const cachedBadgeInfo = {
+  cachedPromise: null,
+  fetchBadgeIcon() {
+    if (this.cachedPromise) {
+      return this.cachedPromise;
+    }
+    this.cachedPromise = Badge.findAll().then((badge_list) => {
+      const badge_groups_to_show = settings.badge_groups_to_show ?? [];
+      const badgeInfoMap = new Map();
+      badge_list
+        .filter((badge) => {
+          return (
+            badge.allow_title &&
+            badge_groups_to_show.includes(badge.badge_grouping?.name) &&
+            badge.image_url
+          );
+        })
+        .forEach((badge) => {
+          badgeInfoMap.set(badge.name, badge.image_url);
+        });
+      return badgeInfoMap;
+    });
+    return this.cachedPromise;
+  },
+};
+
 export default apiInitializer("0.11.1", (api) => {
-  const badgeInfoMap = new Map();
+  withSilencedDeprecations("discourse.post-stream-widget-overrides", () =>
+    widgetImplementation(api)
+  );
+
+  // New glimmer post stream
+  api.addTrackedPostProperties("flair_url", "flair_group_id");
+
+  api.modifyClass(
+    "controller:topic",
+    (Superclass) =>
+      class extends Superclass {
+        init() {
+          super.init(...arguments);
+          cachedBadgeInfo.fetchBadgeIcon().then((badgeIcon) => {
+            this.get("model.postStream.posts").forEach((post) => {
+              if (!post.user_title) {
+                return;
+              }
+              const badgeUrl = badgeIcon.get(post.user_title);
+              // To display badge on flair:
+              // Must have `badgeUrl` AND
+              // `settings.override_group_flair` is true OR no original flair
+              if (
+                badgeUrl &&
+                (settings.override_group_flair ||
+                  !post.flair_group_id ||
+                  !post.flair_url)
+              ) {
+                post.flair_name = post.user_title;
+                post.flair_url = badgeUrl;
+                post.flair_group_id = -1; // flair_group_id must be true to render flair
+              }
+            });
+          });
+        }
+      }
+  );
+});
+
+function widgetImplementation(api) {
+  // For old widget
+  // https://meta.discourse.org/t/upcoming-post-stream-changes-how-to-prepare-themes-and-plugins/372063
+  let badgeInfoMap = new Map();
   let badgeInfoReady = false;
   const rerenderList = [];
-  const badge_groups_to_show = settings.badge_groups_to_show ?? [];
 
-  Badge.findAll().then((badge_list) => {
-    badge_list
-      .filter((badge) => {
-        return (
-          badge.allow_title &&
-          badge_groups_to_show.includes(badge.badge_grouping?.name) &&
-          badge.image_url
-        );
-      })
-      .forEach((badge) => {
-        badgeInfoMap.set(badge.name, badge.image_url);
-      });
+  cachedBadgeInfo.fetchBadgeIcon().then((map) => {
+    badgeInfoMap = map;
     badgeInfoReady = true;
     rerenderList.forEach((widget) => widget.scheduleRerender());
   });
@@ -70,4 +128,4 @@ export default apiInitializer("0.11.1", (api) => {
       },
     });
   });
-});
+}
