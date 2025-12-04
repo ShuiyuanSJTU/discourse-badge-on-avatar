@@ -1,5 +1,4 @@
 import { apiInitializer } from "discourse/lib/api";
-import { withSilencedDeprecations } from "discourse/lib/deprecated";
 import Badge from "discourse/models/badge";
 
 const cachedBadgeInfo = {
@@ -49,10 +48,6 @@ function transformPost(post) {
 }
 
 export default apiInitializer("0.11.1", (api) => {
-  withSilencedDeprecations("discourse.post-stream-widget-overrides", () =>
-    widgetImplementation(api)
-  );
-
   if (settings.block_topic_render_until_badge_loaded) {
     api.modifyClass(
       "route:topic",
@@ -88,52 +83,3 @@ export default apiInitializer("0.11.1", (api) => {
       }
   );
 });
-
-function widgetImplementation(api) {
-  // For old widget
-  // https://meta.discourse.org/t/upcoming-post-stream-changes-how-to-prepare-themes-and-plugins/372063
-  let badgeInfoMap = new Map();
-  let badgeInfoReady = false;
-  const rerenderList = [];
-
-  cachedBadgeInfo.fetchBadgeIcon().then((map) => {
-    badgeInfoMap = map;
-    badgeInfoReady = true;
-    rerenderList.forEach((widget) => widget.scheduleRerender());
-  });
-
-  return api.reopenWidget("post-avatar", {
-    getUserTitle(attrs) {
-      if (attrs.user_title !== undefined) {
-        return attrs.user_title;
-      }
-      return null;
-    },
-    getTitleImgUrl(attrs) {
-      return badgeInfoMap.get(this.getUserTitle(attrs));
-    },
-    hasTitleImg(attrs) {
-      return !!this.getTitleImgUrl(attrs);
-    },
-    html(attrs, ...args) {
-      if (!badgeInfoReady) {
-        rerenderList.push(this);
-      }
-      if (
-        (!(attrs.flair_url || attrs.flair_bg_color) ||
-          settings.override_group_flair) &&
-        this.hasTitleImg(attrs)
-      ) {
-        attrs.flair_name = this.getUserTitle(attrs);
-        attrs.flair_url = this.getTitleImgUrl(attrs);
-        if (attrs.flair_url) {
-          attrs.flair_group_id = -1;
-        }
-        let result = this._super(attrs, ...args);
-        return result;
-      } else {
-        return this._super(attrs, ...args);
-      }
-    },
-  });
-}
